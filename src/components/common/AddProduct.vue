@@ -1,6 +1,6 @@
 <template>
   <el-card class="box-card">
-  <el-form ref="addForm" :model="addForm" :rules="addformRules" label-width="80px" style="margin: 60px">
+  <el-form ref="addForm" :model="addForm"  label-width="80px" style="margin: 60px">
     <el-form-item label="商品名称" prop="productname">
       <el-input v-model="addForm.productname"></el-input>
     </el-form-item>
@@ -90,13 +90,15 @@
     },
 
     methods:{
+      //正则表达式 判断输入的价格是否为正整数 且小数点仅有后两位
       sendprice:function(num){
         var regId= /^\d+\.?\d{0,2}$/;
         if(!regId.test(num)){
-          this.$message.error("请输入数字");
+          this.$message.error("请正确输入数字");
           this.addForm.productprice='';
         }
       },
+      //提交添加商品表单 将数据添加到后台中
       SubmitFrom(){
         this.$axios.post('/product/save',{
           productname:this.addForm.productname,
@@ -115,9 +117,11 @@
           }
         })
       },
+      //清空表单中的数据
       resetForm() {
         this.$refs.addForm.resetFields();
       },
+      //下拉框动态查询商品类型
       selectCode(num){
         this.$axios.get('/category/findall')
           .then(res => {
@@ -131,7 +135,6 @@
       //文件上传成功的钩子函数
       handleSuccess(res, file){
         this.$message.success("图片上传成功");
-
         if (file.response.code===200) {
           this.picture=file.response.message
           console.log(this.picture)

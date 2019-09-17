@@ -52,7 +52,7 @@
     </el-header>
 
     <el-main>
-      <router-view></router-view>
+      <router-view v-if="isRouterAlive"></router-view>
     </el-main>
   </el-container>
 
@@ -89,9 +89,14 @@ import Breadcrumb from '@/components/views/Breadcrumb'
 export default{
   name:'Home',
   components:{Breadcrumb},
+  provide(){
+    return{
+      reload:this.reload
+    }
+  },
   data(){
     return{
-
+      isRouterAlive:true
     }
   },
   computed:{
@@ -100,6 +105,12 @@ export default{
     // ])
   },
   methods:{
+    reload(){
+      this.isRouterAlive=false,
+        this.$nextTick(function () {
+          this.isRouterAlive=true;
+        })
+    },
     handleCommand(command) {
       if(command==="a"){
         this.$router.push("/home")

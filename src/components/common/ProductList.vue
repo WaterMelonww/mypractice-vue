@@ -3,7 +3,7 @@
     <div class="select"><el-card class="box-card">
       <div><i class="el-icon-search"></i><span style="margin: 10px">筛选搜索</span></div>
 
-      <el-form :inline="true" ref="ruleForm" :model="ruleForm" :rules="formRules">
+      <el-form :inline="true" ref="ruleForm" :model="ruleForm">
         <el-form-item label="输入搜索" prop="selectname">
           <el-input placeholder="商品名称"  v-model="ruleForm.selectname"></el-input>
         </el-form-item>
@@ -76,7 +76,7 @@
                  @click="amendproduct(scope.$index)">修改</el-button>
         <el-dialog title="修改信息" :visible.sync="modification" :before-close="handleDialogClose">
           <template>
-              <el-form ref="amendForm" :model="amendForm" :rules="amendFormRules" label-width="80px" style="margin: 60px">
+              <el-form ref="amendForm" :model="amendForm"  label-width="80px" style="margin: 60px">
                 <el-form-item label="商品名称" prop="productName">
                   <el-input v-model="amendForm.productName"></el-input>
                 </el-form-item>
@@ -100,7 +100,7 @@
                     <i class="el-icon-plus" ></i>
                     </span>
                   </el-upload>
-                  <el-dialog :visible.sync="dialogVisible" >
+                  <el-dialog :visible.sync="dialogVisible">
                     <img width="100%" :src="dialogImageUrl" alt="">
                   </el-dialog>
                 </el-form-item>
@@ -110,8 +110,9 @@
                   </el-select>
                 </el-form-item>
                 <el-form-item label="商品分类" prop="categoryCode">
-                  <el-select  placeholder="商品分类" v-model="amendForm.categoryCode" @focus="selectCode(amendForm.categoryCode)">
-                    <el-option  v-for="item in TypeList" :key="item.categoryid" :label="item.categoryName" :value="item.categoryCode"></el-option>
+                  <el-select  placeholder="商品分类" v-model="amendForm.categoryCode" @focus="selectCode(amendForm.categoryName)">
+                    <el-option  v-for="(itemss,index) in TypeList" :key="index" :value="itemss.categoryCode" :label="itemss.categoryName" >
+                    </el-option>
                   </el-select>
                 </el-form-item>
                 <el-form-item >
@@ -124,7 +125,7 @@
         </el-dialog>
       <el-button style="background-color:#FF6666;color: white" size="medium"
                  type="danger"
-                 @click="handleDelete(scope.$index, scope.row)">删除</el-button>
+                 @click="delectproduct(scope.$index)">删除</el-button>
       </template>
     </el-table-column>
 
@@ -133,10 +134,11 @@
 
 <script>
   export default {
+    inject:['reload'],
     data() {
       return {
         tableData:[{    //查询时返回的数据绑定
-          // productid:'',
+          // productId:'',
           // productname:'',
           // productprice:'',
           // producticon:'',
@@ -152,7 +154,10 @@
           CodeList:[{
           }]
         },
-        TypeList:[], //用来接收从接口中获取出来的值
+        TypeList:[{
+          // categoryName:'',
+          // categoryCode:''
+        }], //用来接收从接口中获取出来的值
         amendForm:{    //修改商品数据时的数据绑定
           productName:'',
           productPrice:'',
@@ -161,7 +166,9 @@
           categoryCode:'',
         },
         modification:false,
-        notamend:[],
+        dialogVisible: false,
+        dialogImageUrl: '',
+        notamend:[], //用来接受回滚时的数据
         StatusList:[
           {
             value:0,
@@ -177,6 +184,7 @@
     },
     created(){
       this.mounted();
+
     },
     mounted(){
       var that = this;
@@ -199,6 +207,60 @@
         })
     },
     methods:{
+      //删除商品
+      delectproduct(num){
+        this.$confirm('此操作将永久删除该商品, 是否继续?','提示',{
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(()=>{
+          this.$axios.post('/product/delect',{
+            productId:num
+          }).then(responses=>{
+            if(responses.data.code===200){
+              this.$message({
+                type: 'success',
+                message: '删除成功!'
+              });
+            }else{
+              this.$message({
+                type: 'error',
+                message: '删除失败!'
+              });
+            }
+          })
+        }).catch(() => {
+          this.$message({
+            type: 'info',
+            message: '已取消删除'
+          });
+        });
+      },
+      //提交修改
+      SubmitFrom(){
+        this.$axios.post('/product/amend',{
+          productId:this.amendForm.productId,
+          productName:this.amendForm.productName,
+          productPrice:this.amendForm.productPrice,
+          productIcon:this.amendForm.productIcon,
+          productStatus:this.amendForm.productStatus,
+          categoryCode:this.amendForm.categoryCode,
+          amendId:localStorage.getItem("userId"),
+          amendName:JSON.parse(window.localStorage.getItem('user')).username
+        }).then(response=>{
+          if(response.data.code===200){
+            // alert(response.data.message)
+            this.$message.info("修改成功");
+            this.modification=false;
+            this.reload();
+          }else if(response.data.code===400){
+            alert(response.data.message)
+            this.$message.error("修改失败");
+            this.modification=false;
+            this.reload();
+          }
+        })
+      },
       //点击取消按钮 dom元素中的事务回滚
       callOff(){
         this.modification=false
@@ -215,14 +277,12 @@
           if (res.data) {
             this.TypeList=res.data
           }
-          // alert(JSON.stringify(this.TypeList))
         })
         .catch(failResponse => {
         })
         this.modification=true
         this.notamend=this.tableData[num]
         this.amendForm=JSON.parse(JSON.stringify(this.notamend))
-         // alert(JSON.stringify(this.notamend))
       },
       //正则表达式  判断该输入框是否为正整数 且最多输入小数点后两位
       sendid:function(num){
@@ -239,7 +299,6 @@
           .then(res => {
             if (res.data) {
               this.ruleForm.CodeList=res.data
-              this.TypeList=res.data
             }
           })
           .catch(failResponse => {
@@ -255,7 +314,6 @@
         //   console.log(this.ruleForm.selectname)
         //   console.log(this.ruleForm.selectCode)
         //   console.log(this.ruleForm.selectStatus)
-
         this.$axios
           .post('/product/findbydinamic', {
             selectid:  this.ruleForm.selectid,
@@ -274,7 +332,48 @@
           })
           .catch(failResponse => {
           })
-    }}
+      },
+      //文件上传成功的钩子函数
+      handleSuccess(res, file){
+        this.$message.success("图片上传成功");
+        if (file.response.code===200) {
+          this.amendForm.productIcon=file.response.message
+          //将返回的文件储存路径赋值picture字段
+        }
+      },
+      handleRemove(file, fileList) {
+        this.$message.success("删除成功");
+      },
+      handlePreview(file) {
+        this.dialogImageUrl = file.url;
+        this.dialogVisible = true;
+      },
+      //上传的文件个数超出设定时触发的函数
+      onExceed(files, fileList) {
+        this.$message({
+          type: 'info',
+          message: '最多只能上传一个图片',
+          duration: 2000
+        });
+      },
+      //文件上传前的前的钩子函数
+      //参数是上传的文件，若返回false，或返回Primary且被reject，则停止上传
+      beforeUpload(file){
+        const isJPG = file.type === 'image/jpeg';
+        const isGIF = file.type === 'image/gif';
+        const isPNG = file.type === 'image/png';
+        const isBMP = file.type === 'image/bmp';
+        const isLt2M = file.size / 1024 / 1024 < 2;
+
+        if (!isJPG && !isGIF && !isPNG && !isBMP) {
+          alert('上传图片必须是JPG/GIF/PNG/BMP 格式!');
+        }
+        if (!isLt2M) {
+          alert('上传图片大小不能超过 2MB!');
+        }
+        return (isJPG || isBMP || isGIF || isPNG) && isLt2M;
+      },
+    }
   };
 </script>
 
