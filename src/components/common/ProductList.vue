@@ -125,7 +125,7 @@
         </el-dialog>
       <el-button style="background-color:#FF6666;color: white" size="medium"
                  type="danger"
-                 @click="delectproduct(scope.$index)">删除</el-button>
+                 @click="delectproduct(tableData[scope.$index].productId)">删除</el-button>
       </template>
     </el-table-column>
 
@@ -209,11 +209,13 @@
     methods:{
       //删除商品
       delectproduct(num){
+        // this.notamend=this.tableData[num]
         this.$confirm('此操作将永久删除该商品, 是否继续?','提示',{
           confirmButtonText: '确定',
           cancelButtonText: '取消',
           type: 'warning'
         }).then(()=>{
+
           this.$axios.post('/product/delect',{
             productId:num
           }).then(responses=>{
@@ -222,11 +224,13 @@
                 type: 'success',
                 message: '删除成功!'
               });
+              this.reload();
             }else{
               this.$message({
                 type: 'error',
                 message: '删除失败!'
               });
+              this.reload();
             }
           })
         }).catch(() => {
@@ -251,7 +255,6 @@
           if(response.data.code===200){
             // alert(response.data.message)
             this.$message.info("修改成功");
-            this.modification=false;
             this.reload();
           }else if(response.data.code===400){
             alert(response.data.message)
